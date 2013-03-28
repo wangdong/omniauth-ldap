@@ -67,7 +67,7 @@ module OmniAuth
       # :password => psw
       def bind_as(args = {})
         result = false
-        @connection.open do |me|
+        open_ldap(@connection) do |me|
           rs = me.search args
           if rs and rs.first and dn = rs.first.dn
             password = args[:password]
@@ -144,6 +144,21 @@ module OmniAuth
         protocol = ssl ? "ldaps" : "ldap"
         URI.parse("#{protocol}://#{host}:#{port}").to_s
       end
+
+      def open_ldap(ldap)
+        Timeout.timeout(1.0) do
+        begin
+            Timeout.timeout(0.2) do
+                ldap.open do |conn|
+                    yield conn
+                end
+            end
+        rescue Timeout::Error
+            retry
+        end
+        end
+      end
+
     end
   end
 end
